@@ -84,6 +84,15 @@ class Board():
         textRect.center = (self.screen_width//4 + self.screen_width//2, self.screen_height-20)
         self.screen.blit(text, textRect)
 
+    def show_winner(self):
+        text_area_rect = pygame.Rect(0, self.screen_height - 50, self.screen_width, 50)
+        self.screen.fill((self.bg_color), text_area_rect)
+        font = pygame.font.Font('freesansbold.ttf', 35)
+        text = font.render(f'Player {self.player+1} wins!', True, pygame.Color("black"))
+        textRect = text.get_rect()
+        textRect.center = (self.screen_width//2, self.screen_height//2)
+        self.screen.blit(text, textRect)
+
     def show_next_move(self):
         text_area_rect = pygame.Rect(0, self.screen_height - 50, self.screen_width, 50)
         self.screen.fill((self.bg_color), text_area_rect)
