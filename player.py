@@ -32,6 +32,6 @@ class Player:
     
     def won_game(self):
         piece_positions = [piece.position for piece in self.pieces]
-        if {41, 42, 43, 44}.issubset(piece_positions):
+        if {40, 41, 42, 43}.issubset(piece_positions):
             return True
         return False

@@ -8,10 +8,11 @@ from board import Board
 from player import Player
 
 class Game:
-    def __init__(self, nplayer):
+    def __init__(self, nplayer, fast):
         self.nplayer = nplayer
         self.current_player_id = 0
         self.steps = 0
+        self.fast = fast
         self.init_players()
         self.run_game()
 
@@ -60,24 +61,30 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return False
-                elif event.type in [pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN]:
+                elif event.type in [pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN] and not self.fast:
                     self.steps = self.roll_dice()
                     board.steps = self.steps
                     board.refresh_board()
                     time.sleep(0.3)
+            if self.fast:
+                self.steps = self.roll_dice()
+                board.steps = self.steps
+                board.refresh_board()
+
         else:
             moveable_pieces = self.current_player().find_moveable_pieces(self.steps)
+            if self.fast: moveable_pieces = moveable_pieces[:1]
             moved = False
             if len(moveable_pieces) == 0:
-                time.sleep(1)
+                if not self.fast: time.sleep(1)
             
             elif len(moveable_pieces) == 1:
-                time.sleep(0.3)
+                if not self.fast: time.sleep(0.3)
                 new_pos = moveable_pieces[0].move_piece(self.steps)
                 moved = True
 
             elif self.current_player().pieces_home() == 4:
-                time.sleep(0.3)
+                if not self.fast: time.sleep(0.3)
                 new_pos = moveable_pieces[-1].move_piece(self.steps)
                 moved = True
 
@@ -122,6 +129,7 @@ class Game:
         # board.refresh_board()
 
         running = True
+        winner = None
         while running:
             board.current_player(self.current_player_id)
             board.refresh_board()
@@ -132,6 +140,19 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+            
+            if self.current_player().won_game():
+                winner = self.current_player().player_id
+                running = False
 
+        if winner is not None:
+            board.show_winner()
+            game_over = True
+            while game_over:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        game_over = False
+            pygame.quit()
+            
+    pygame.quit()
 
-        pygame.quit()
