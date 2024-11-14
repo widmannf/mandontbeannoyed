@@ -16,9 +16,22 @@ class Player:
         for piece in self.pieces:
             if piece.position == 0 and piece.position + steps not in occupied:
                 return [piece]
-        moveable_pieces = [piece for piece in self.pieces if piece.position != -1 and piece.position + steps not in occupied]
+
+        moveable_pieces = [
+            piece for piece in self.pieces
+            if piece.position != -1
+            and (piece.position + steps) not in occupied 
+            and (piece.position + steps) < 44 
+        ]
+
         if steps == 6:
             for piece in self.pieces:
                 if piece.is_home():
                     moveable_pieces.append(piece)
         return moveable_pieces
+    
+    def won_game(self):
+        piece_positions = [piece.position for piece in self.pieces]
+        if {41, 42, 43, 44}.issubset(piece_positions):
+            return True
+        return False

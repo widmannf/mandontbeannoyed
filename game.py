@@ -54,8 +54,6 @@ class Game:
         for piece in pieces:
             piece.movable = True
         board.refresh_board()
-
-    
         
     def next_action(self, board):
         if self.steps == 0:
@@ -103,7 +101,7 @@ class Game:
                     if player.player_id == self.current_player().player_id:
                         continue
                     for piece in player.pieces:
-                        if (piece.position + player.offset) % 40 == new_pos_abs:
+                        if piece.position < 40 and (piece.position + player.offset) % 40 == new_pos_abs:
                             piece.return_home()
                             board.refresh_board()
                             break
@@ -115,7 +113,6 @@ class Game:
             board.refresh_board()
         return True
 
-    #TODO: kick other pieces out
     #TODO: win condition
     def run_game(self):
         pygame.init()

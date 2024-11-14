@@ -10,6 +10,9 @@ class Piece:
     def is_home(self):
         return self.position == -1
     
+    def is_in_goal(self):
+        return self.position > 39
+    
     def move_piece(self, steps):
         if self.is_home():
             if steps == 6:
