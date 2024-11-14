@@ -120,7 +120,7 @@ class Game:
             board.refresh_board()
         return True
 
-    #TODO: win condition
+    #TODO: currently the next player gets one more move after game ends
     def run_game(self):
         pygame.init()
 
@@ -153,6 +153,6 @@ class Game:
                     if event.type == pygame.QUIT:
                         game_over = False
             pygame.quit()
-            
+
     pygame.quit()
 
