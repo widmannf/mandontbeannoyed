@@ -16,5 +16,7 @@ Implementation of the German game "Mensch ärger dich nicht", similar to the eng
 # Run
 python dontbeannoyed.py
 
+options: -a for autoroll, you don't need to click to roll the die
+
 # Why?
 Really I want to train an AI to play this game, to more efficiently beat my girlfriend in it. So implementing the game is the first step.
