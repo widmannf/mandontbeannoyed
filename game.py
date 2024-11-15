@@ -73,7 +73,8 @@ class Game:
 
         else:
             moveable_pieces = self.current_player().find_moveable_pieces(self.steps)
-            if self.fast: moveable_pieces = moveable_pieces[:1]
+            if self.fast:
+                moveable_pieces = moveable_pieces[:1]
             moved = False
             if len(moveable_pieces) == 0:
                 if not self.fast: time.sleep(1)
@@ -83,7 +84,12 @@ class Game:
                 new_pos = moveable_pieces[0].move_piece(self.steps)
                 moved = True
 
-            elif self.current_player().pieces_home() == 4:
+            # elif self.current_player().pieces_home() == 4:
+            #     if not self.fast: time.sleep(0.3)
+            #     new_pos = moveable_pieces[-1].move_piece(self.steps)
+            #     moved = True
+
+            elif all(p == -1 for p in [p.position for p in moveable_pieces]):
                 if not self.fast: time.sleep(0.3)
                 new_pos = moveable_pieces[-1].move_piece(self.steps)
                 moved = True
@@ -112,11 +118,12 @@ class Game:
                             piece.return_home()
                             board.refresh_board()
                             break
-
-            if self.steps != 6:
-                self.next_player(board)
-            else:
-                self.steps = 0
+            
+            if not self.current_player().won_game():
+                if self.steps != 6 or not moved:
+                    self.next_player(board)
+                else:
+                    self.steps = 0
             board.refresh_board()
         return True
 
