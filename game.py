@@ -79,24 +79,24 @@ class Game:
             if self.fast:
                 moveable_pieces = moveable_pieces[:1]
             moved = False
+            
+            # no moveable pieces
             if len(moveable_pieces) == 0:
                 if not self.fast: time.sleep(1)
             
+            # only one moveable piece
             elif len(moveable_pieces) == 1:
                 if not self.fast: time.sleep(0.3)
                 new_pos = moveable_pieces[0].move_piece(self.steps)
                 moved = True
 
-            # elif self.current_player().pieces_home() == 4:
-            #     if not self.fast: time.sleep(0.3)
-            #     new_pos = moveable_pieces[-1].move_piece(self.steps)
-            #     moved = True
-
+            # all moveable pieces are home
             elif all(p == -1 for p in [p.position for p in moveable_pieces]):
                 if not self.fast: time.sleep(0.3)
                 new_pos = moveable_pieces[-1].move_piece(self.steps)
                 moved = True
 
+            # multiple moveable pieces
             else:
                 self.set_movable(board, moveable_pieces)
                 waiting_for_click = True
@@ -130,13 +130,10 @@ class Game:
             board.refresh_board()
         return True
 
-    #TODO: currently the next player gets one more move after game ends
     def run_game(self):
         pygame.init()
-
         board = Board(self.players)
         board.init_board()
-        # board.refresh_board()
 
         running = True
         winner = None
