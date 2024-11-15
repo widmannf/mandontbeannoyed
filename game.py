@@ -8,11 +8,12 @@ from board import Board
 from player import Player
 
 class Game:
-    def __init__(self, nplayer, fast):
+    def __init__(self, nplayer, fast, autoroll):
         self.nplayer = nplayer
         self.current_player_id = 0
         self.steps = 0
         self.fast = fast
+        self.autoroll = autoroll
         self.init_players()
         self.run_game()
 
@@ -66,10 +67,12 @@ class Game:
                     board.steps = self.steps
                     board.refresh_board()
                     time.sleep(0.3)
-            if self.fast:
+            if self.fast or self.autoroll:
                 self.steps = self.roll_dice()
                 board.steps = self.steps
                 board.refresh_board()
+            if self.autoroll:
+                time.sleep(0.5)
 
         else:
             moveable_pieces = self.current_player().find_moveable_pieces(self.steps)
