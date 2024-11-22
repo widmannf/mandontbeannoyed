@@ -1,13 +1,5 @@
 from game import Game
-import sys
 import argparse
-
-if __name__ == "__main__":
-    # for debugging
-    if "-f" in sys.argv:
-        fast = True
-    else:
-        fast = False
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -20,4 +12,5 @@ if __name__ == "__main__":
         print("Invalid number of players. Please enter a number between 2 and 4.")
         exit()
     game = Game(int(nplayer), args.fast, args.autoroll)
+    game.run_game()
 
