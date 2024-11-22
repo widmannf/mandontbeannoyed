@@ -4,13 +4,13 @@ class Color:
             case 0:
                 self.color = 'white'
             case 1:
-                self.color = 'grey'
-            case 2:
                 self.color = 'gold'
+            case 2:
+                self.color = 'grey'
             case 3:
-                self.color = 'darkgreen'
-            case 4:
                 self.color = 'darkred'
+            case 4:
+                self.color = 'darkgreen'
             case 5:
                 self.color = 'bisque'
             case _:
