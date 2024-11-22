@@ -105,26 +105,23 @@ class Game:
         if self.fast:
             self.moveable_pieces = self.moveable_pieces[:1]
         moved = False
-
         # no moveable pieces
         if len(self.moveable_pieces) == 0:
             if not self.fast: time.sleep(1)
-        
         # only one moveable piece
         elif len(self.moveable_pieces) == 1:
             if not self.fast: time.sleep(0.3)
             self.new_pos = self.moveable_pieces[0].move_piece(self.steps)
             moved = True
-
         # all moveable pieces are home
         elif all(p == -1 for p in [p.position for p in self.moveable_pieces]):
             if not self.fast: time.sleep(0.3)
             self.new_pos = self.moveable_pieces[-1].move_piece(self.steps)
             moved = True
-
         # multiple moveable pieces
         else:
             self.display_movable(board, self.moveable_pieces)
+            #TODO: Need to have an option to select a piece by number
             piece = self.move_select_piece()
             if piece == -1:
                 return False
@@ -133,15 +130,6 @@ class Game:
             self.undisplay_movable(board, self.moveable_pieces)
         return moved
 
-
-    # For the game to be compatible with OpenAI Gym, we need to define the following:
-    """
-    States: Board representation, dice roll, current player, etc.
-    Actions: Choosing which piece to move (discrete actions: [0, 1, 2, 3]).
-    Rewards: Based on game progress (e.g., advancing to home, capturing opponent pieces).
-    Step Function: Executes an action, updates the board, checks for terminal conditions, and returns the new state and reward.
-    Reset Function: Resets the board for a new game.
-    """
     def get_state(self):
         pos = [[piece.position for piece in player.pieces] for player in self.players]
         cur_player = self.current_player().player_id
