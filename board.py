@@ -22,8 +22,9 @@ class Board():
 
     def add_fields(self):
         grid = [list([] for x in range(0, self.ncels)) for y in range(0, self.ncels)]
-        colors = np.genfromtxt("board_colors.csv", delimiter=",", dtype=str)
-        track = np.genfromtxt("board.csv", delimiter=",", dtype=str)
+        basedir = os.path.dirname(os.path.abspath(__file__))
+        colors = np.genfromtxt(os.path.join(basedir, "board_colors.csv"), delimiter=",", dtype=str)
+        track = np.genfromtxt(os.path.join(basedir, "board.csv"), delimiter=",", dtype=str)
 
         for y in range(0, self.ncels):
             for x in range(0, self.ncels):
