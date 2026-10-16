@@ -38,28 +38,42 @@ Goal: train an RL agent (DQN) to play "Mensch ärger dich nicht" (Ludo). The old
    `reset()`'s auto-advance, leaving `options=[]` -> `rng.choice([])` crash.
    Fixed: `reset()` loops until `_advance()` ends on a live agent decision.
 
-## Status
+## Training results
 
-- Stress test of env (100k episodes, random policy) is passing/verifying the
-  empty-options fix (was aborted mid-run by user, no failures up to that point).
-- Early smoke run (400 eps vs heuristic): win rate 43% (baseline) -> 49-51%,
-  avg return rising 90 -> 102. Learning is happening but noisy.
+10k episodes for each config, eval every 1k episodes (300 eval games), 2-player
+vs heuristic opponent. Heuristic-first baseline: ~42.80%.
+
+| Config | Best win rate | Notes |
+|--------|--------------|-------|
+| Default (lr=1e-3, hidden=128, update=2) | 52.67% | Baseline run |
+| `--update-every 4` | **55.00%** | Fewer updates, more stable |
+| `--hidden 256` | **56.00%** | More capacity helps |
+| `--hidden 256 --update-every 4` | 52.67% | No synergy |
+| `--lr 3e-4` | 53.67% | Lower LR didn't help |
+
+Best config: `--hidden 256` (~56% win rate). Final model in `dqn_model/` uses
+this config (54.67% on final repeat — high variance).
+
+Expected eval noise is ~±3% (300 games), so differences near threshold are not
+conclusive. The agent clearly beats the heuristic baseline, but further gains
+likely need self-play or more episodes.
 
 ## How to run
 
 ```
 python train_dqn.py --episodes 10000 --eval-every 1000 --eval-games 300      # default 2-player
 python train_dqn.py --players 4                                               # 4-player
+python train_dqn.py --episodes 10000 --eval-every 1000 --eval-games 300 --hidden 256   # best known config
 ```
-
-Baseline to beat: first-player heuristic win rate ~43% (printed once at first eval).
 
 ## Next steps (to continue)
 
-1. Finish stress-test of env after the empty-options fix (`/tmp/opencode/debug*`).
-2. Run a full ~10k-episode training and confirm win rate climbs well above 50%.
-3. Consider tuning: more hidden units, higher `--update-every`, reward weights
-   (capture bonus vs goal bonus), opponent strength.
-4. Optionally a real self-play variant or a rule-based baseline comparison.
-5. Delete `/tmp/opencode/train*.log`, `/tmp/opencode/debug*`, `dqn_model/`
-   when done if not wanted.
+1. ~~Stress-test env after empty-options fix~~ (done: 100k eps, 0 errors).
+2. ~~Run a full ~10k-episode training~~ (done, plus tuning sweeps).
+3. **Self-play** — train against itself instead of a fixed heuristic to get
+   a stronger opponent as the agent improves.
+4. **More episodes** — 50k+ episodes may still improve with the --hidden 256
+   config.
+5. **Reward tuning** — higher capture bonuses or win bonuses may shape behaviour.
+6. **4-player** — run with `--players 4` to handle the full game.
+7. Delete `/tmp/opencode/` temp files when done.
