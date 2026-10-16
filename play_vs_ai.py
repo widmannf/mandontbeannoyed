@@ -46,16 +46,13 @@ def build_obs(engine, agent, die, opts):
     return np.array(obs, dtype=np.float32)
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Play against a trained DQN agent.')
-    parser.add_argument('--model', default=str(Path(__file__).parent / 'dqn_model'), help='Path to saved Keras model')
-    parser.add_argument('--ai-first', action='store_true', help='AI goes first')
-    args = parser.parse_args()
-
+def run_vs_ai(ai_first=False, model_path=None):
+    if model_path is None:
+        model_path = str(Path(__file__).parent / 'dqn_model')
     print('Loading DQN model...')
-    model = tf.keras.models.load_model(args.model)
+    model = tf.keras.models.load_model(model_path)
 
-    agent = 1 if args.ai_first else 0
+    agent = 1 if ai_first else 0
     ai = 1 - agent
 
     engine = Engine(2)
@@ -199,4 +196,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Play against a trained DQN agent.')
+    parser.add_argument('--model', default=str(Path(__file__).parent / 'dqn_model'), help='Path to saved Keras model')
+    parser.add_argument('--ai-first', action='store_true', help='AI goes first')
+    args = parser.parse_args()
+    run_vs_ai(ai_first=args.ai_first, model_path=args.model)
