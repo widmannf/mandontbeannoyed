@@ -1,2 +1,3 @@
 .vscode/*
+dqn_model/
 __pycache__/*

@@ -1,84 +1,123 @@
-import gym
-import numpy as np
+import random
 
-from board import Board
-from game import Game
+from engine import Engine
+
+WIN_REWARD = 100
+CAPTURE_REWARD = 15
+BE_CAPTURED_REWARD = -15
+EXIT_REWARD = 5
+GOAL_REWARD = 10
+DEEPEN_REWARD = 1
 
 
-class DbaEnv(gym.Env):
-    def __init__(self, num_players=4):
-        super(DbaEnv, self).__init__()
-        
-        # Initialize game components
+class DbaEnv:
+    def __init__(self, num_players=2, seed=None, max_steps=2000):
+        self.agent = 0
         self.num_players = num_players
-        self.game = Game(num_players, fast=False, autoroll=False)
-        
-        # Define action and observation spaces
-        self.action_space = gym.spaces.Discrete(4)
-        self.observation_space = gym.spaces.Box(
-            low=-1, high=44, shape=(4 * num_players,), dtype=np.int32 
-        )
-        self.reset()
+        self.engine = Engine(num_players, seed=seed)
+        self.max_steps = max_steps
+        self.options = []
+        self.die = 0
+        self.step_count = 0
+        self.obs_size = num_players * 4 + 2 + 4
 
-    def _get_observation(self):
-        state = []
-        for player in self.game.players:
-            for piece in player.pieces:
-                state.append(piece.position)
-        return np.array(state)
-    
+    def reset(self):
+        while True:
+            self.engine.reset()
+            self.engine.current = self.agent
+            self.step_count = 0
+            self.options = []
+            self.die = 0
+            done, _ = self._advance()
+            if not done:
+                break
+        return self._obs()
 
+    def _advance(self):
+        penalized = 0
+        while self.engine.winner is None:
+            if self.step_count >= self.max_steps:
+                return True, penalized
+            die = self.engine.roll()
+            opts = self.engine.move_options(self.engine.current, die)
+            if not opts:
+                self.engine.next_player()
+                continue
+            if self.engine.current == self.agent:
+                self.die = die
+                self.options = opts
+                return False, penalized
+            action = self._opponent_choice(self.engine.current, opts, die)
+            _, _, hits = self.engine.apply_move(self.engine.current, action, die)
+            for opp, _ in hits:
+                if opp == self.agent:
+                    penalized += 1
+            if die == 6:
+                continue
+            self.engine.next_player()
+        return True, penalized
 
-        #     def reset(self):
-        #     # Reset the game to the initial state
-        #     self.board.init_board()
-        #     self.current_player_id = 0
-        #     return self._get_observation()
+    def step(self, action):
+        if action not in self.options:
+            raise ValueError(f"invalid action {action} for options {self.options}")
+        self.step_count += 1
+        die = self.die
+        prev, new, hits = self.engine.apply_move(self.agent, action, die)
+        reward = CAPTURE_REWARD * len(hits)
+        if prev == -1:
+            reward += EXIT_REWARD
+        if new >= 40:
+            if prev < 40:
+                reward += GOAL_REWARD
+            elif new > prev:
+                reward += DEEPEN_REWARD
+        if self.engine.winner is not None:
+            self.die = 0
+            self.options = []
+            return self._obs(), reward + WIN_REWARD, True, {}
+        if die != 6:
+            self.engine.next_player()
+        done, penalized = self._advance()
+        reward += BE_CAPTURED_REWARD * penalized
+        if done:
+            self.die = 0
+            self.options = []
+            if self.engine.winner == self.agent:
+                reward += WIN_REWARD
+            return self._obs(), reward, True, {}
+        return self._obs(), reward, False, {}
 
-        # def step(self, action):
-        #     # Apply action (move a piece)
-        #     player = self.board.current_player(self.current_player_id)
-        #     reward = 0
-        #     done = False
-        #     info = {}
-            
-        #     if action in range(4):  # Valid piece index
-        #         piece = player.pieces[action]
-        #         if piece.movable:
-        #             piece.move_piece(player.steps)
-        #             reward = self._calculate_reward(piece)
-        #         else:
-        #             reward = -1  # Penalize invalid move
-        #     else:
-        #         reward = -1  # Penalize invalid action
-            
-        #     # Check if the game has ended
-        #     if player.won_game():
-        #         done = True
-        #         reward += 100  # Bonus for winning
-            
-        #     # Update turn
-        #     self.current_player_id = (self.current_player_id + 1) % self.num_players
-            
-        #     return self._get_observation(), reward, done, info
+    def _encode(self, owner, pos):
+        if pos == -1:
+            return -1
+        if pos >= 40:
+            return 44
+        return (pos + self.engine.offsets[owner] - self.engine.offsets[self.agent]) % 40
 
-        # def render(self, mode="human"):
-        #     # Optional: Use your existing Pygame code here for visualization
-        #     self.board.refresh_board()
+    def _obs(self):
+        obs = []
+        for owner in range(self.num_players):
+            for pos in self.engine.positions[owner]:
+                obs.append(self._encode(owner, pos))
+        obs.append(self.die)
+        obs.append(self.engine.current)
+        for i in range(4):
+            obs.append(1 if i in self.options else 0)
+        return obs
 
-        # def _get_observation(self):
-        #     # Return the current state of the board as a flattened array
-        #     state = []
-        #     for player in self.board.players:
-        #         for piece in player.pieces:
-        #             state.append(piece.position)
-        #     return np.array(state)
+    def _opponent_choice(self, player, opts, die):
+        def score(pi):
+            old = self.engine.positions[player][pi]
+            nxt = 0 if old == -1 else old + die
+            cap = 0
+            if nxt < 40:
+                tgt = (nxt + self.engine.offsets[player]) % 40
+                for other in range(self.num_players):
+                    if other == player:
+                        continue
+                    for pos in self.engine.positions[other]:
+                        if pos != -1 and pos < 40 and (pos + self.engine.offsets[other]) % 40 == tgt:
+                            cap = 1
+            return cap, nxt, -pi
 
-        # def _calculate_reward(self, piece):
-        #     # Define your reward logic
-        #     if piece.position == 44:  # Reached home
-        #         return 10
-        #     elif piece.position > 0:  # Moved forward
-        #         return 1
-        #     else:
-        #         return 0
+        return max(opts, key=score)
