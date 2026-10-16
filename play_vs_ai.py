@@ -62,7 +62,8 @@ def main():
     display_players = make_display_players(engine)
 
     pygame.init()
-    board = Board(display_players)
+    board = Board(display_players, panel_height=70)
+    board.player_labels = ['You', 'AI']
     board.init_board()
 
     engine.reset()
@@ -79,10 +80,11 @@ def main():
 
         if engine.current == agent:
             board.steps = 0
+            board.status_message = 'Click or press any key to roll the die'
             board.refresh_board()
 
-            print('\n=== Your turn ===')
-            print('Click or press any key to roll the die...')
+            print()
+            print('=== Your turn ===')
 
             ev = pygame.event.wait()
             if ev.type == pygame.QUIT:
@@ -94,7 +96,9 @@ def main():
 
             opts = engine.move_options(engine.current, die)
             if not opts:
-                print(f'Rolled {die}. No moves available.')
+                print(f'  Rolled {die}. No moves available.')
+                board.status_message = 'No moves available'
+                board.refresh_board()
                 time.sleep(0.8)
                 engine.next_player()
                 continue
@@ -103,9 +107,12 @@ def main():
             moveable = [display_players[engine.current].pieces[i] for i in opts]
             for p in moveable:
                 p.movable = True
-            board.refresh_board()
 
-            print(f'Rolled {die}. Choose a piece: click it or press 1-4.')
+            hint = f'Rolled {die}. Pick piece: click it or press 1-4'
+            board.status_message = hint
+            board.refresh_board()
+            print(f'  Rolled {die}. Your moveable pieces: {[i + 1 for i in opts]}')
+
             chosen = None
             while chosen is None and running:
                 for ev in pygame.event.get():
@@ -130,20 +137,27 @@ def main():
 
             _, _, hits = engine.apply_move(engine.current, chosen, die)
             sync_display(display_players, engine)
+            if hits:
+                board.status_message = 'Hit! Opponent piece sent home!'
+            else:
+                board.status_message = ''
             board.refresh_board()
 
             if hits:
-                print('Hit an opponent piece!')
+                print('  Hit! Opponent piece sent home!')
+                time.sleep(0.6)
         else:
             die = engine.roll()
             board.steps = die
+            board.status_message = "AI's turn..."
             sync_display(display_players, engine)
             board.refresh_board()
             time.sleep(0.5)
 
             opts = engine.move_options(engine.current, die)
             if not opts:
-                print(f'AI rolled {die}. No moves.')
+                board.status_message = 'AI has no moves'
+                board.refresh_board()
                 time.sleep(0.5)
                 engine.next_player()
                 continue
@@ -153,23 +167,28 @@ def main():
             masked = np.full(4, -1e9)
             masked[opts] = q[opts]
             action = int(np.argmax(masked))
-            print(f'AI rolled {die}, moves piece {action + 1}.')
+            print(f'  AI rolled {die}, moves piece {action + 1}.')
+
             _, _, hits = engine.apply_move(engine.current, action, die)
             sync_display(display_players, engine)
-            board.refresh_board()
-            time.sleep(0.5)
-
             if hits:
-                print('AI hit one of your pieces!')
+                board.status_message = 'AI hit one of your pieces!'
+            else:
+                board.status_message = ''
+            board.refresh_board()
+            time.sleep(0.8)
 
         if engine.winner is not None:
             sync_display(display_players, engine)
             board.current_player(engine.winner)
+            board.status_message = ''
             board.show_winner()
             if engine.winner == agent:
-                print('\nYou win!')
+                print()
+                print('You win!')
             else:
-                print('\nAI wins! Better luck next time.')
+                print()
+                print('AI wins! Better luck next time.')
             time.sleep(4)
             break
 
