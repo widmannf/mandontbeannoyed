@@ -102,8 +102,6 @@ class Game:
                     break
 
     def move_piece(self, board):
-        if self.fast:
-            self.moveable_pieces = self.moveable_pieces[:1]
         moved = False
         # no moveable pieces
         if len(self.moveable_pieces) == 0:

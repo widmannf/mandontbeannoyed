@@ -46,7 +46,7 @@ def build_obs(engine, agent, die, opts):
     return np.array(obs, dtype=np.float32)
 
 
-def run_vs_ai(ai_first=False, model_path=None):
+def run_vs_ai(ai_first=False, model_path=None, fast=False):
     if model_path is None:
         model_path = str(Path(__file__).parent / 'dqn_model')
     print('Loading DQN model...')
@@ -60,7 +60,7 @@ def run_vs_ai(ai_first=False, model_path=None):
 
     pygame.init()
     board = Board(display_players, panel_height=70)
-    board.player_labels = ['You', 'AI']
+    board.player_labels = ['You', 'AI'] if agent == 0 else ['AI', 'You']
     board.init_board()
 
     engine.reset()
@@ -105,32 +105,40 @@ def run_vs_ai(ai_first=False, model_path=None):
             for p in moveable:
                 p.movable = True
 
-            hint = f'Rolled {die}. Pick piece: click it or press 1-4'
-            board.status_message = hint
-            board.refresh_board()
-            print(f'  Rolled {die}. Your moveable pieces: {[i + 1 for i in opts]}')
+            if fast and len(opts) == 1:
+                chosen = opts[0]
+                for p in moveable:
+                    p.movable = False
+                board.status_message = f'Rolled {die}, moving piece {chosen + 1}'
+                board.refresh_board()
+                time.sleep(0.4)
+            else:
+                hint = f'Rolled {die}. Pick piece: click it or press 1-4'
+                board.status_message = hint
+                board.refresh_board()
+                print(f'  Rolled {die}. Your moveable pieces: {[i + 1 for i in opts]}')
 
-            chosen = None
-            while chosen is None and running:
-                for ev in pygame.event.get():
-                    if ev.type == pygame.QUIT:
-                        running = False
-                        chosen = -1
-                    elif ev.type == pygame.KEYDOWN:
-                        if ev.unicode in ('1', '2', '3', '4'):
-                            idx = int(ev.unicode) - 1
-                            if idx in opts:
-                                chosen = idx
-                    elif ev.type == pygame.MOUSEBUTTONDOWN:
-                        mp = [(p - 10) / 50 - 0.5 for p in ev.pos]
-                        best = min(moveable, key=lambda p: (mp[0] - p.x) ** 2 + (mp[1] - p.y) ** 2)
-                        if best.piece_id in opts:
-                            chosen = best.piece_id
-            if not running:
-                break
+                chosen = None
+                while chosen is None and running:
+                    for ev in pygame.event.get():
+                        if ev.type == pygame.QUIT:
+                            running = False
+                            chosen = -1
+                        elif ev.type == pygame.KEYDOWN:
+                            if ev.unicode in ('1', '2', '3', '4'):
+                                idx = int(ev.unicode) - 1
+                                if idx in opts:
+                                    chosen = idx
+                        elif ev.type == pygame.MOUSEBUTTONDOWN:
+                            mp = [(p - 10) / 50 - 0.5 for p in ev.pos]
+                            best = min(moveable, key=lambda p: (mp[0] - p.x) ** 2 + (mp[1] - p.y) ** 2)
+                            if best.piece_id in opts:
+                                chosen = best.piece_id
+                if not running:
+                    break
 
-            for p in moveable:
-                p.movable = False
+                for p in moveable:
+                    p.movable = False
 
             _, _, hits = engine.apply_move(engine.current, chosen, die)
             sync_display(display_players, engine)

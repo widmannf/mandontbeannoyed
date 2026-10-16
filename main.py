@@ -4,12 +4,15 @@ import sys
 WIDTH, HEIGHT = 500, 500
 BG = (245, 235, 220)
 
+
 def _font(size):
     return pygame.font.Font(None, size)
+
 
 def _text(screen, text, font, color, center):
     surf = font.render(text, True, color)
     screen.blit(surf, surf.get_rect(center=center))
+
 
 def _button(screen, rect, label, clickable, mp):
     hover = clickable and rect.collidepoint(mp) if mp else False
@@ -19,6 +22,7 @@ def _button(screen, rect, label, clickable, mp):
         pygame.draw.rect(screen, (40, 40, 40), rect, width=2, border_radius=8)
     _text(screen, label, _font(26), (255, 255, 255), rect.center)
 
+
 def _toggle(screen, rect, label, active, mp):
     color = (50, 150, 50) if active else (180, 70, 70)
     if rect.collidepoint(mp) if mp else False:
@@ -27,11 +31,6 @@ def _toggle(screen, rect, label, active, mp):
     pygame.draw.rect(screen, (40, 40, 40), rect, width=2, border_radius=6)
     _text(screen, label, _font(24), (255, 255, 255), rect.center)
 
-def _wait_for_launch():
-    for ev in pygame.event.get():
-        if ev.type == pygame.QUIT:
-            return 'quit'
-    return None
 
 def _run_loop(screen, draw_fn, handle_fn):
     clock = pygame.time.Clock()
@@ -75,38 +74,52 @@ def main_menu():
 
 def ai_menu():
     human_first = True
+    fast = False
 
     def draw(screen, mp):
-        _text(screen, "Play against AI", _font(38), (60, 60, 60), (WIDTH // 2, 40))
-        _text(screen, "Who goes first?", _font(26), (80, 80, 80), (WIDTH // 2, 105))
-        r1 = pygame.Rect(WIDTH // 2 - 120, 140, 110, 50)
-        r2 = pygame.Rect(WIDTH // 2 + 10, 140, 110, 50)
+        _text(screen, "Play against AI", _font(38), (60, 60, 60), (WIDTH // 2, 30))
+        _text(screen, "Who goes first?", _font(26), (80, 80, 80), (WIDTH // 2, 85))
+        r1 = pygame.Rect(WIDTH // 2 - 120, 120, 110, 50)
+        r2 = pygame.Rect(WIDTH // 2 + 10, 120, 110, 50)
         _toggle(screen, r1, 'You', human_first, mp)
         _toggle(screen, r2, 'AI', not human_first, mp)
-        rs = pygame.Rect(WIDTH // 2 - 100, 240, 200, 55)
-        rb = pygame.Rect(WIDTH // 2 - 100, 330, 200, 50)
+
+        _text(screen, "Fast mode (auto-move when only 1 option)", _font(22), (80, 80, 80), (WIDTH // 2, 210))
+        r_f_on = pygame.Rect(WIDTH // 2 - 95, 235, 80, 40)
+        r_f_off = pygame.Rect(WIDTH // 2 + 15, 235, 80, 40)
+        _toggle(screen, r_f_on, 'On', fast, mp)
+        _toggle(screen, r_f_off, 'Off', not fast, mp)
+
+        rs = pygame.Rect(WIDTH // 2 - 100, 310, 200, 55)
+        rb = pygame.Rect(WIDTH // 2 - 100, 390, 200, 50)
         _button(screen, rs, 'Start!', True, mp)
         _button(screen, rb, 'Back', True, mp)
 
     def handle(ev):
-        nonlocal human_first
+        nonlocal human_first, fast
         if ev.type != pygame.MOUSEBUTTONDOWN:
             return None
-        r1 = pygame.Rect(WIDTH // 2 - 120, 140, 110, 50)
-        r2 = pygame.Rect(WIDTH // 2 + 10, 140, 110, 50)
-        rs = pygame.Rect(WIDTH // 2 - 100, 240, 200, 55)
-        rb = pygame.Rect(WIDTH // 2 - 100, 330, 200, 50)
+        r1 = pygame.Rect(WIDTH // 2 - 120, 120, 110, 50)
+        r2 = pygame.Rect(WIDTH // 2 + 10, 120, 110, 50)
+        r_f_on = pygame.Rect(WIDTH // 2 - 95, 235, 80, 40)
+        r_f_off = pygame.Rect(WIDTH // 2 + 15, 235, 80, 40)
+        rs = pygame.Rect(WIDTH // 2 - 100, 310, 200, 55)
+        rb = pygame.Rect(WIDTH // 2 - 100, 390, 200, 50)
         if r1.collidepoint(ev.pos):
             human_first = True
         elif r2.collidepoint(ev.pos):
             human_first = False
+        elif r_f_on.collidepoint(ev.pos):
+            fast = True
+        elif r_f_off.collidepoint(ev.pos):
+            fast = False
         elif rs.collidepoint(ev.pos):
-            return ('launch_ai', human_first)
+            return ('launch_ai', human_first, fast)
         elif rb.collidepoint(ev.pos):
             return 'back'
         return None
 
-    return _run_loop(pygame.display.set_mode((WIDTH, HEIGHT + 60)), draw, handle)
+    return _run_loop(pygame.display.set_mode((WIDTH, 480)), draw, handle)
 
 
 def local_menu():
@@ -115,23 +128,28 @@ def local_menu():
     fast = False
 
     def draw(screen, mp):
-        _text(screen, "Local Multiplayer", _font(38), (60, 60, 60), (WIDTH // 2, 30))
-        _text(screen, "Number of players", _font(24), (80, 80, 80), (WIDTH // 2, 80))
-        for i, n in enumerate([2, 3, 4]):
-            r = pygame.Rect(110 + i * 140, 110, 110, 45)
+        _text(screen, "Local Multiplayer", _font(38), (60, 60, 60), (WIDTH // 2, 25))
+        _text(screen, "Number of players", _font(24), (80, 80, 80), (WIDTH // 2, 70))
+        for i, n in enumerate([2, 3]):
+            r = pygame.Rect(WIDTH // 2 - 125 + i * 130, 100, 100, 45)
             _toggle(screen, r, str(n), nplayers == n, mp)
-        _text(screen, "Autoroll", _font(24), (80, 80, 80), (WIDTH // 2, 180))
-        r_ar_on = pygame.Rect(WIDTH // 2 - 95, 205, 80, 40)
-        r_ar_off = pygame.Rect(WIDTH // 2 + 15, 205, 80, 40)
+        r4 = pygame.Rect(WIDTH // 2 - 50, 160, 100, 45)
+        _toggle(screen, r4, '4', nplayers == 4, mp)
+
+        _text(screen, "Autoroll (auto-roll the die)", _font(22), (80, 80, 80), (WIDTH // 2, 225))
+        r_ar_on = pygame.Rect(WIDTH // 2 - 95, 250, 80, 40)
+        r_ar_off = pygame.Rect(WIDTH // 2 + 15, 250, 80, 40)
         _toggle(screen, r_ar_on, 'On', autoroll, mp)
         _toggle(screen, r_ar_off, 'Off', not autoroll, mp)
-        _text(screen, "Fast mode", _font(24), (80, 80, 80), (WIDTH // 2, 270))
-        r_f_on = pygame.Rect(WIDTH // 2 - 95, 295, 80, 40)
-        r_f_off = pygame.Rect(WIDTH // 2 + 15, 295, 80, 40)
+
+        _text(screen, "Fast mode (auto-move when only 1 option)", _font(22), (80, 80, 80), (WIDTH // 2, 315))
+        r_f_on = pygame.Rect(WIDTH // 2 - 95, 340, 80, 40)
+        r_f_off = pygame.Rect(WIDTH // 2 + 15, 340, 80, 40)
         _toggle(screen, r_f_on, 'On', fast, mp)
         _toggle(screen, r_f_off, 'Off', not fast, mp)
-        rs = pygame.Rect(WIDTH // 2 - 100, 365, 200, 50)
-        rb = pygame.Rect(WIDTH // 2 - 100, 440, 200, 50)
+
+        rs = pygame.Rect(WIDTH // 2 - 100, 410, 200, 50)
+        rb = pygame.Rect(WIDTH // 2 - 100, 480, 200, 50)
         _button(screen, rs, 'Start!', True, mp)
         _button(screen, rb, 'Back', True, mp)
 
@@ -139,34 +157,38 @@ def local_menu():
         nonlocal nplayers, autoroll, fast
         if ev.type != pygame.MOUSEBUTTONDOWN:
             return None
-        for i, n in enumerate([2, 3, 4]):
-            r = pygame.Rect(110 + i * 140, 110, 110, 45)
+        for i, n in enumerate([2, 3]):
+            r = pygame.Rect(WIDTH // 2 - 125 + i * 130, 100, 100, 45)
             if r.collidepoint(ev.pos):
                 nplayers = n
-        r_ar_on = pygame.Rect(WIDTH // 2 - 95, 205, 80, 40)
-        r_ar_off = pygame.Rect(WIDTH // 2 + 15, 205, 80, 40)
+        r4 = pygame.Rect(WIDTH // 2 - 50, 160, 100, 45)
+        if r4.collidepoint(ev.pos):
+            nplayers = 4
+        r_ar_on = pygame.Rect(WIDTH // 2 - 95, 250, 80, 40)
+        r_ar_off = pygame.Rect(WIDTH // 2 + 15, 250, 80, 40)
         if r_ar_on.collidepoint(ev.pos):
             autoroll = True
         elif r_ar_off.collidepoint(ev.pos):
             autoroll = False
-        r_f_on = pygame.Rect(WIDTH // 2 - 95, 295, 80, 40)
-        r_f_off = pygame.Rect(WIDTH // 2 + 15, 295, 80, 40)
+        r_f_on = pygame.Rect(WIDTH // 2 - 95, 340, 80, 40)
+        r_f_off = pygame.Rect(WIDTH // 2 + 15, 340, 80, 40)
         if r_f_on.collidepoint(ev.pos):
             fast = True
         elif r_f_off.collidepoint(ev.pos):
             fast = False
-        rs = pygame.Rect(WIDTH // 2 - 100, 365, 200, 50)
-        rb = pygame.Rect(WIDTH // 2 - 100, 440, 200, 50)
+        rs = pygame.Rect(WIDTH // 2 - 100, 410, 200, 50)
+        rb = pygame.Rect(WIDTH // 2 - 100, 480, 200, 50)
         if rs.collidepoint(ev.pos):
             return ('launch_local', nplayers, autoroll, fast)
         elif rb.collidepoint(ev.pos):
             return 'back'
         return None
 
-    return _run_loop(pygame.display.set_mode((WIDTH, 520)), draw, handle)
+    return _run_loop(pygame.display.set_mode((WIDTH, 550)), draw, handle)
 
 
 if __name__ == '__main__':
+    pygame.init()
     while True:
         choice = main_menu()
         if choice == 'quit':
@@ -180,10 +202,10 @@ if __name__ == '__main__':
             elif result == 'back':
                 continue
             elif result[0] == 'launch_ai':
-                _, human_first = result
+                _, human_first, fast = result
                 pygame.quit()
                 from play_vs_ai import run_vs_ai
-                run_vs_ai(ai_first=not human_first)
+                run_vs_ai(ai_first=not human_first, fast=fast)
                 sys.exit()
         elif choice == 'local':
             result = local_menu()
