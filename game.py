@@ -7,6 +7,17 @@ import time
 from board import Board
 from player import Player
 
+
+def _sleep(secs):
+    now = time.monotonic()
+    end = now + secs
+    while now < end:
+        pygame.event.pump()
+        remaining = end - now
+        _sleep(min(0.05, remaining))
+        now = time.monotonic()
+
+
 class Game:
     def __init__(self, nplayer, fast, autoroll):
         self.nplayer = nplayer
@@ -69,7 +80,7 @@ class Game:
             board.steps = self.steps
             board.refresh_board()
             if self.autoroll:
-                time.sleep(0.5)
+                _sleep(0.5)
             return True
         else:
             while True:
@@ -80,7 +91,7 @@ class Game:
                     self.steps = self.roll_dice()
                     board.steps = self.steps
                     board.refresh_board()
-                    time.sleep(0.3)
+                    _sleep(0.3)
                     return True
                 
     def move_select_piece(self):
@@ -105,15 +116,15 @@ class Game:
         moved = False
         # no moveable pieces
         if len(self.moveable_pieces) == 0:
-            if not self.fast: time.sleep(1)
+            if not self.fast: _sleep(1)
         # only one moveable piece
         elif len(self.moveable_pieces) == 1:
-            if not self.fast: time.sleep(0.3)
+            if not self.fast: _sleep(0.3)
             self.new_pos = self.moveable_pieces[0].move_piece(self.steps)
             moved = True
         # all moveable pieces are home
         elif all(p == -1 for p in [p.position for p in self.moveable_pieces]):
-            if not self.fast: time.sleep(0.3)
+            if not self.fast: _sleep(0.3)
             self.new_pos = self.moveable_pieces[-1].move_piece(self.steps)
             moved = True
         # multiple moveable pieces

@@ -46,7 +46,17 @@ def build_obs(engine, agent, die, opts):
     return np.array(obs, dtype=np.float32)
 
 
-def run_vs_ai(ai_first=False, model_path=None, fast=False):
+def _sleep(secs):
+    now = time.monotonic()
+    end = now + secs
+    while now < end:
+        pygame.event.pump()
+        remaining = end - now
+        _sleep(min(0.05, remaining))
+        now = time.monotonic()
+
+
+def run_vs_ai(ai_first=False, model_path=None, fast=False, autoroll=False):
     if model_path is None:
         model_path = str(Path(__file__).parent / 'dqn_model')
     print('Loading DQN model...')
@@ -77,15 +87,25 @@ def run_vs_ai(ai_first=False, model_path=None, fast=False):
 
         if engine.current == agent:
             board.steps = 0
-            board.status_message = 'Click or press any key to roll the die'
-            board.refresh_board()
+            if autoroll:
+                board.status_message = 'Rolling...'
+                board.refresh_board()
+                _sleep(0.6)
+            else:
+                board.status_message = 'Click or press any key to roll the die'
+                board.refresh_board()
+                print()
+                print('=== Your turn ===')
 
-            print()
-            print('=== Your turn ===')
-
-            ev = pygame.event.wait()
-            if ev.type == pygame.QUIT:
-                break
+                while True:
+                    ev = pygame.event.wait()
+                    if ev.type == pygame.QUIT:
+                        running = False
+                        break
+                    if ev.type in (pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN):
+                        break
+                if not running:
+                    break
 
             die = engine.roll()
             board.steps = die
@@ -96,7 +116,7 @@ def run_vs_ai(ai_first=False, model_path=None, fast=False):
                 print(f'  Rolled {die}. No moves available.')
                 board.status_message = 'No moves available'
                 board.refresh_board()
-                time.sleep(0.8)
+                _sleep(0.8)
                 engine.next_player()
                 continue
 
@@ -111,7 +131,7 @@ def run_vs_ai(ai_first=False, model_path=None, fast=False):
                     p.movable = False
                 board.status_message = f'Rolled {die}, moving piece {chosen + 1}'
                 board.refresh_board()
-                time.sleep(0.4)
+                _sleep(0.4)
             else:
                 hint = f'Rolled {die}. Pick piece: click it or press 1-4'
                 board.status_message = hint
@@ -150,20 +170,20 @@ def run_vs_ai(ai_first=False, model_path=None, fast=False):
 
             if hits:
                 print('  Hit! Opponent piece sent home!')
-                time.sleep(0.6)
+                _sleep(0.6)
         else:
             die = engine.roll()
             board.steps = die
             board.status_message = "AI's turn..."
             sync_display(display_players, engine)
             board.refresh_board()
-            time.sleep(0.5)
+            _sleep(0.5)
 
             opts = engine.move_options(engine.current, die)
             if not opts:
                 board.status_message = 'AI has no moves'
                 board.refresh_board()
-                time.sleep(0.5)
+                _sleep(0.5)
                 engine.next_player()
                 continue
 
@@ -181,7 +201,7 @@ def run_vs_ai(ai_first=False, model_path=None, fast=False):
             else:
                 board.status_message = ''
             board.refresh_board()
-            time.sleep(0.8)
+            _sleep(0.8)
 
         if engine.winner is not None:
             sync_display(display_players, engine)
@@ -194,7 +214,7 @@ def run_vs_ai(ai_first=False, model_path=None, fast=False):
             else:
                 print()
                 print('AI wins! Better luck next time.')
-            time.sleep(4)
+            _sleep(4)
             break
 
         if die != 6:
