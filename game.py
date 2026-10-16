@@ -14,7 +14,7 @@ def _sleep(secs):
     while now < end:
         pygame.event.pump()
         remaining = end - now
-        _sleep(min(0.05, remaining))
+        time.sleep(min(0.05, remaining))
         now = time.monotonic()
 
 
