@@ -59,7 +59,6 @@ def _sleep(secs):
 def run_vs_ai(ai_first=False, model_path=None, fast=False, autoroll=False):
     if model_path is None:
         model_path = str(Path(__file__).parent / 'dqn_model')
-    print('Loading DQN model...')
     model = tf.keras.models.load_model(model_path)
 
     agent = 1 if ai_first else 0
@@ -94,8 +93,6 @@ def run_vs_ai(ai_first=False, model_path=None, fast=False, autoroll=False):
             else:
                 board.status_message = 'Click or press any key to roll the die'
                 board.refresh_board()
-                print()
-                print('=== Your turn ===')
 
                 while True:
                     ev = pygame.event.wait()
@@ -113,7 +110,6 @@ def run_vs_ai(ai_first=False, model_path=None, fast=False, autoroll=False):
 
             opts = engine.move_options(engine.current, die)
             if not opts:
-                print(f'  Rolled {die}. No moves available.')
                 board.status_message = 'No moves available'
                 board.refresh_board()
                 _sleep(0.8)
@@ -136,7 +132,6 @@ def run_vs_ai(ai_first=False, model_path=None, fast=False, autoroll=False):
                 hint = f'Rolled {die}. Pick piece: click it or press 1-4'
                 board.status_message = hint
                 board.refresh_board()
-                print(f'  Rolled {die}. Your moveable pieces: {[i + 1 for i in opts]}')
 
                 chosen = None
                 while chosen is None and running:
@@ -167,10 +162,6 @@ def run_vs_ai(ai_first=False, model_path=None, fast=False, autoroll=False):
             else:
                 board.status_message = ''
             board.refresh_board()
-
-            if hits:
-                print('  Hit! Opponent piece sent home!')
-                _sleep(0.6)
         else:
             die = engine.roll()
             board.steps = die
@@ -192,7 +183,6 @@ def run_vs_ai(ai_first=False, model_path=None, fast=False, autoroll=False):
             masked = np.full(4, -1e9)
             masked[opts] = q[opts]
             action = int(np.argmax(masked))
-            print(f'  AI rolled {die}, moves piece {action + 1}.')
 
             _, _, hits = engine.apply_move(engine.current, action, die)
             sync_display(display_players, engine)
@@ -209,12 +199,7 @@ def run_vs_ai(ai_first=False, model_path=None, fast=False, autoroll=False):
             board.status_message = ''
             board.show_winner()
             if engine.winner == agent:
-                print()
-                print('You win!')
-            else:
-                print()
-                print('AI wins! Better luck next time.')
-            _sleep(4)
+                _sleep(4)
             break
 
         if die != 6:

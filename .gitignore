@@ -1,4 +1,5 @@
 .vscode/*
 dqn_model/
-__pycache__/*STATE.md
+__pycache__/
+*.logSTATE.md
 STATE.md

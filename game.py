@@ -157,13 +157,11 @@ class Game:
             board.current_player(self.current_player_id)
             board.refresh_board()
 
-            print(f'Roll dice, state: {self.get_state()}')
             if not self.move_roll_dice(board):
                 running = False
 
             self.find_moveable_pieces()
 
-            print(f'Move piece, state: {self.get_state()}')
             moved = self.move_piece(board)
             if moved:
                 self.check_hit_opponent()
