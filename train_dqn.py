@@ -100,6 +100,15 @@ def train(args):
     optimizer = tf.keras.optimizers.Adam(learning_rate=args.lr)
     loss_fn = tf.keras.losses.Huber()
 
+    if args.self_play:
+        opp_model = make_model(obs_size, hidden=args.hidden)
+        def opp_policy(obs, valid):
+            q = opp_model(np.asarray([obs], dtype=np.float32), training=False).numpy()
+            masked_q = np.full((1, 4), -1e9)
+            masked_q[0, valid] = q[0, valid]
+            return int(np.argmax(masked_q[0]))
+        env = DbaEnv(num_players=args.players, seed=args.seed, opponent_policy=opp_policy)
+
     buf = deque(maxlen=args.replay)
     step_fn = compile_step(model, target, optimizer=optimizer, loss_fn=loss_fn,
                            gamma=args.gamma, tau=args.tau)
@@ -139,6 +148,9 @@ def train(args):
                 step_fn(*sample_batch(args.batch))
         returns.append(ep_ret)
 
+        if args.self_play and episode % args.opponent_update == 0:
+            opp_model.set_weights(model.get_weights())
+
         if episode % args.eval_every == 0:
             win_rate = evaluate(model, args.players, args.eval_games, args.seed or episode, obs_size)
             line = (f"ep {episode:6d} | eps {eps:.3f} | avg_ret {np.mean(returns):8.2f} "
@@ -171,5 +183,7 @@ if __name__ == "__main__":
     parser.add_argument("--eps-min", type=float, default=0.05)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--save", type=str, default="dqn_model")
+    parser.add_argument("--self-play", action="store_true")
+    parser.add_argument("--opponent-update", type=int, default=5000)
     args = parser.parse_args()
     train(args)

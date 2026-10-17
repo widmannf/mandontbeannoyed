@@ -11,11 +11,12 @@ DEEPEN_REWARD = 1
 
 
 class DbaEnv:
-    def __init__(self, num_players=2, seed=None, max_steps=2000):
+    def __init__(self, num_players=2, seed=None, max_steps=2000, opponent_policy=None):
         self.agent = 0
         self.num_players = num_players
         self.engine = Engine(num_players, seed=seed)
         self.max_steps = max_steps
+        self.opponent_policy = opponent_policy
         self.options = []
         self.die = 0
         self.step_count = 0
@@ -87,25 +88,35 @@ class DbaEnv:
             return self._obs(), reward, True, {}
         return self._obs(), reward, False, {}
 
-    def _encode(self, owner, pos):
+    def _encode(self, owner, pos, relative_to=None):
+        if relative_to is None:
+            relative_to = self.agent
         if pos == -1:
             return -1
         if pos >= 40:
             return 44
-        return (pos + self.engine.offsets[owner] - self.engine.offsets[self.agent]) % 40
+        return (pos + self.engine.offsets[owner] - self.engine.offsets[relative_to]) % 40
 
-    def _obs(self):
+    def _obs(self, player=None, die=None):
+        if player is None:
+            player = self.agent
+        if die is None:
+            die = self.die
         obs = []
         for owner in range(self.num_players):
             for pos in self.engine.positions[owner]:
-                obs.append(self._encode(owner, pos))
-        obs.append(self.die)
+                obs.append(self._encode(owner, pos, relative_to=player))
+        obs.append(die)
         obs.append(self.engine.current)
+        opts = self.engine.move_options(player, die) if player == self.engine.current else []
         for i in range(4):
-            obs.append(1 if i in self.options else 0)
+            obs.append(1 if i in opts else 0)
         return obs
 
     def _opponent_choice(self, player, opts, die):
+        if self.opponent_policy is not None:
+            obs = self._obs(player=player, die=die)
+            return self.opponent_policy(obs, opts)
         def score(pi):
             old = self.engine.positions[player][pi]
             nxt = 0 if old == -1 else old + die
