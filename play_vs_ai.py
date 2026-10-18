@@ -29,7 +29,7 @@ def sync_display(display_players, engine):
             piece.position = engine.positions[i][j]
 
 
-def build_obs(engine, agent, die, opts):
+def build_obs(engine, die, opts, player):
     obs = []
     for owner in range(engine.num_players):
         for pos in engine.positions[owner]:
@@ -38,7 +38,7 @@ def build_obs(engine, agent, die, opts):
             elif pos >= 40:
                 obs.append(44.0)
             else:
-                obs.append(float((pos + engine.offsets[owner] - engine.offsets[agent]) % 40))
+                obs.append(float((pos + engine.offsets[owner] - engine.offsets[player]) % 40))
     obs.append(float(die))
     obs.append(float(engine.current))
     for i in range(4):
@@ -56,20 +56,26 @@ def _sleep(secs):
         now = time.monotonic()
 
 
-def run_vs_ai(ai_first=False, model_path=None, fast=False, autoroll=False):
+def run_vs_ai(ai_first=False, model_path=None, fast=False, autoroll=False, num_players=2):
     if model_path is None:
         model_path = str(Path(__file__).parent / 'dqn_model')
     model = tf.keras.models.load_model(model_path)
 
-    agent = 1 if ai_first else 0
-    ai = 1 - agent
+    agent = 0
+    if ai_first:
+        agent = 1 if num_players == 2 else (num_players - 1)
 
-    engine = Engine(2)
+    engine = Engine(num_players)
     display_players = make_display_players(engine)
 
     pygame.init()
     board = Board(display_players, panel_height=70)
-    board.player_labels = ['You', 'AI'] if agent == 0 else ['AI', 'You']
+    labels = ['You'] + ['AI'] * (num_players - 1)
+    if ai_first:
+        labels = ['AI'] + ['You'] + ['AI'] * (num_players - 2)
+    if ai_first and num_players == 2:
+        labels = ['AI', 'You']
+    board.player_labels = labels
     board.init_board()
 
     engine.reset()
@@ -165,20 +171,20 @@ def run_vs_ai(ai_first=False, model_path=None, fast=False, autoroll=False):
         else:
             die = engine.roll()
             board.steps = die
-            board.status_message = "AI's turn..."
+            board.status_message = f"{labels[engine.current]}'s turn..."
             sync_display(display_players, engine)
             board.refresh_board()
             _sleep(0.5)
 
             opts = engine.move_options(engine.current, die)
             if not opts:
-                board.status_message = 'AI has no moves'
+                board.status_message = f'{labels[engine.current]} has no moves'
                 board.refresh_board()
                 _sleep(0.5)
                 engine.next_player()
                 continue
 
-            obs = build_obs(engine, agent, die, opts)
+            obs = build_obs(engine, die, opts, engine.current)
             q = model(obs[np.newaxis], training=False).numpy()[0]
             masked = np.full(4, -1e9)
             masked[opts] = q[opts]
@@ -187,7 +193,7 @@ def run_vs_ai(ai_first=False, model_path=None, fast=False, autoroll=False):
             _, _, hits = engine.apply_move(engine.current, action, die)
             sync_display(display_players, engine)
             if hits:
-                board.status_message = 'AI hit one of your pieces!'
+                board.status_message = f'{labels[engine.current]} hit one of your pieces!'
             else:
                 board.status_message = ''
             board.refresh_board()
@@ -198,8 +204,7 @@ def run_vs_ai(ai_first=False, model_path=None, fast=False, autoroll=False):
             board.current_player(engine.winner)
             board.status_message = ''
             board.show_winner()
-            if engine.winner == agent:
-                _sleep(4)
+            _sleep(4)
             break
 
         if die != 6:
@@ -210,7 +215,19 @@ def run_vs_ai(ai_first=False, model_path=None, fast=False, autoroll=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Play against a trained DQN agent.')
-    parser.add_argument('--model', default=str(Path(__file__).parent / 'dqn_model'), help='Path to saved Keras model')
+    parser.add_argument('--model', default=None, help='Path to saved Keras model')
     parser.add_argument('--ai-first', action='store_true', help='AI goes first')
+    parser.add_argument('--players', type=int, default=2, choices=[2, 3, 4],
+                        help='Number of players (you vs N-1 AI opponents)')
+    parser.add_argument('--fast', action='store_true', help='Fast AI moves')
+    parser.add_argument('--autoroll', action='store_true', help='Auto-roll the die')
     args = parser.parse_args()
-    run_vs_ai(ai_first=args.ai_first, model_path=args.model)
+
+    model_path = args.model
+    if model_path is None:
+        model_path = str(Path(__file__).parent / f'dqn_model_{args.players}p')
+        if args.players == 2:
+            model_path = str(Path(__file__).parent / 'dqn_model')
+
+    run_vs_ai(ai_first=args.ai_first, model_path=model_path,
+              fast=args.fast, autoroll=args.autoroll, num_players=args.players)
