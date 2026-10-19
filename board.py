@@ -119,7 +119,8 @@ class Board():
         self.screen.fill((self.bg_color), text_area_rect)
         font = pygame.font.Font(None, 40)
         label = self.player_labels[self.player] if self.player_labels else f'Player {self.player + 1}'
-        text = font.render(f'{label} wins!', True, (0, 0, 0))
+        verb = 'win' if label == 'You' else 'wins'
+        text = font.render(f'{label} {verb}!', True, (0, 0, 0))
         text_rect = text.get_rect(center=(self.screen_width // 2, self.screen_height - self.panel_height // 2))
         self.screen.blit(text, text_rect)
         pygame.display.flip()
