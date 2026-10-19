@@ -3,6 +3,8 @@ import os
 import random
 from collections import deque
 
+import dba_gym
+
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
 import numpy as np
@@ -92,6 +94,12 @@ def simulate_heuristic_wins(num_players, games, seed=0):
 
 
 def train(args):
+    dba_gym.WIN_REWARD = args.reward_win
+    dba_gym.CAPTURE_REWARD = args.reward_capture
+    dba_gym.BE_CAPTURED_REWARD = args.reward_captured
+    dba_gym.EXIT_REWARD = args.reward_exit
+    dba_gym.GOAL_REWARD = args.reward_goal
+
     env = DbaEnv(num_players=args.players, seed=args.seed)
     obs_size = env.obs_size
     model = make_model(obs_size, hidden=args.hidden)
@@ -100,6 +108,8 @@ def train(args):
     optimizer = tf.keras.optimizers.Adam(learning_rate=args.lr)
     loss_fn = tf.keras.losses.Huber()
 
+    opp_model = None
+    opp_policy = None
     if args.self_play:
         opp_model = make_model(obs_size, hidden=args.hidden)
         def opp_policy(obs, valid):
@@ -107,7 +117,8 @@ def train(args):
             masked_q = np.full((1, 4), -1e9)
             masked_q[0, valid] = q[0, valid]
             return int(np.argmax(masked_q[0]))
-        env = DbaEnv(num_players=args.players, seed=args.seed, opponent_policy=opp_policy)
+        if args.heuristic_warmup == 0:
+            env = DbaEnv(num_players=args.players, seed=args.seed, opponent_policy=opp_policy)
 
     buf = deque(maxlen=args.replay)
     step_fn = compile_step(model, target, optimizer=optimizer, loss_fn=loss_fn,
@@ -148,8 +159,11 @@ def train(args):
                 step_fn(*sample_batch(args.batch))
         returns.append(ep_ret)
 
-        if args.self_play and episode % args.opponent_update == 0:
-            opp_model.set_weights(model.get_weights())
+        if args.self_play:
+            if args.heuristic_warmup and episode == args.heuristic_warmup:
+                env = DbaEnv(num_players=args.players, seed=args.seed, opponent_policy=opp_policy)
+            elif episode % args.opponent_update == 0:
+                opp_model.set_weights(model.get_weights())
 
         if episode % args.eval_every == 0:
             win_rate = evaluate(model, args.players, args.eval_games, args.seed or episode, obs_size)
@@ -184,6 +198,13 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--save", type=str, default="dqn_model")
     parser.add_argument("--self-play", action="store_true")
-    parser.add_argument("--opponent-update", type=int, default=5000)
+    parser.add_argument("--opponent-update", type=int, default=1000)
+    parser.add_argument("--heuristic-warmup", type=int, default=0,
+                        help="Start with heuristic opponent for N episodes, then switch to self-play")
+    parser.add_argument("--reward-win", type=float, default=100)
+    parser.add_argument("--reward-capture", type=float, default=5)
+    parser.add_argument("--reward-captured", type=float, default=-5)
+    parser.add_argument("--reward-exit", type=float, default=3)
+    parser.add_argument("--reward-goal", type=float, default=10)
     args = parser.parse_args()
     train(args)
